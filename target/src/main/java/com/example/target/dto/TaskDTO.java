@@ -9,11 +9,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class TaskDTO {
-
     private Long id;
     private String title;
     private String description;
     private String priority;
     private LocalDateTime dueTime;
     private Boolean completed;
+    private Long userId;
 }

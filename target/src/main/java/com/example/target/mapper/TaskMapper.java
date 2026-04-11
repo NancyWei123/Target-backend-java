@@ -16,11 +16,12 @@ public class TaskMapper {
                 .priority(task.getPriority())
                 .dueTime(task.getDueTime())
                 .completed(task.getCompleted())
+                .userId(task.getUser() != null ? task.getUser().getId() : null)
                 .build();
     }
 
     // ✅ DTO → Entity
-    public static Task toEntity(Task dto) {
+    public static Task toEntity(TaskDTO dto) {
         if (dto == null) return null;
 
         return Task.builder()

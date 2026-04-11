@@ -1,9 +1,6 @@
 package com.example.target.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,4 +22,7 @@ public class Task {
     private String priority; // LOW, MEDIUM, HIGH
     private LocalDateTime dueTime;
     private Boolean completed = false;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

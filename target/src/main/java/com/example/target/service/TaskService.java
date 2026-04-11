@@ -2,20 +2,34 @@ package com.example.target.service;
 
 import com.example.target.dto.TaskDTO;
 import com.example.target.entity.Task;
+import com.example.target.entity.User;
 import com.example.target.mapper.TaskMapper;
 import com.example.target.repository.TaskRepository;
+import com.example.target.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
     private final TaskRepository taskRepository;
-
+    private final UserRepository userRepository;
     // ✅ Constructor injection (better than @Autowired)
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository) {
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
+    }
+    // ✅ Get tasks for a specific user
+    public List<TaskDTO> getTasksByUserId(Long userId) {
+        return taskRepository.findByUserId(userId)
+                .stream()
+                .map(TaskMapper::toDTO)
+                .toList();
     }
 
     // ✅ GET all tasks
@@ -35,33 +49,67 @@ public class TaskService {
     }
 
     // ✅ CREATE task
-    public TaskDTO createTask(Task dto) {
+    public TaskDTO createTask(TaskDTO dto, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Task task = TaskMapper.toEntity(dto);
+        task.setUser(user);   // set user_id here
+
         Task saved = taskRepository.save(task);
         return TaskMapper.toDTO(saved);
     }
 
     // ✅ UPDATE task
-    public TaskDTO updateTask(Long id, Task dto) {
-        Task existing = taskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Task not found with id: " + id));
+    public TaskDTO updateTask(Long id, Task updatedTask, Long userId) {
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
 
-        // update fields
-        existing.setTitle(dto.getTitle());
-        existing.setDescription(dto.getDescription());
-        existing.setPriority(dto.getPriority());
-        existing.setDueTime(dto.getDueTime());
-        existing.setCompleted(dto.getCompleted());
+        if (existingTask.getUser() == null || !existingTask.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You are not allowed to update this task");
+        }
 
-        Task updated = taskRepository.save(existing);
-        return TaskMapper.toDTO(updated);
+        existingTask.setTitle(updatedTask.getTitle());
+        existingTask.setDescription(updatedTask.getDescription());
+        existingTask.setPriority(updatedTask.getPriority());
+        existingTask.setDueTime(updatedTask.getDueTime());
+        existingTask.setCompleted(updatedTask.getCompleted());
+
+        Task saved = taskRepository.save(existingTask);
+        return TaskMapper.toDTO(saved);
     }
 
     // ✅ DELETE task
-    public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new RuntimeException("Task not found with id: " + id);
+    public void deleteTask(Long id, Long userId) {
+        Task existingTask = taskRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (existingTask.getUser() == null || !existingTask.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You are not allowed to delete this task");
         }
-        taskRepository.deleteById(id);
+
+        taskRepository.delete(existingTask);
+    }
+
+    public List<TaskDTO> searchTasksByKeyword(Long userId, String keyword) {
+        List<Task> tasks = taskRepository.searchTasksByKeywords(userId, keyword);
+
+        return tasks.stream()
+                .map(TaskMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+    public List<TaskDTO> searchTasksByDDL(Long userId, LocalDate startDate, LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("startDate cannot be after endDate");
+        }
+
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        List<Task> tasks = taskRepository.findByUserIdAndDueTimeBetween(userId, startDateTime, endDateTime);
+
+        return tasks.stream()
+                .map(TaskMapper::toDTO)
+                .collect(Collectors.toList());
     }
 }
