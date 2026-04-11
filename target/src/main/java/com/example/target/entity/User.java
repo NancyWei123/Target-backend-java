@@ -26,4 +26,7 @@ public class User {
     private Boolean isActive = true;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean dark_mode;
+    private Boolean email_notifications;
+    private Boolean task_reminders;
 }

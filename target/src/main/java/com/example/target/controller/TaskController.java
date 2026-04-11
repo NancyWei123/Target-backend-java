@@ -58,8 +58,27 @@ public class TaskController {
     ) {
         String token = authHeader.substring(7);
         Long userId = JwtUtil.extractUserId(token);
-
         return taskService.updateTask(id, task, userId);
+    }
+    // ✅ FINISH task
+    @PutMapping("/finish/{taskId}")
+    public TaskDTO changeStatusTask(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long taskId
+    ) {
+        String token = authHeader.substring(7);
+        Long userId = JwtUtil.extractUserId(token);
+        return taskService.finishTask(taskId, userId);
+    }
+
+    @PutMapping("/undo/{taskId}")
+    public TaskDTO undoTask(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable Long taskId
+    ) {
+        String token = authHeader.substring(7);
+        Long userId = JwtUtil.extractUserId(token);
+        return taskService.undoTask(taskId, userId);
     }
 
     // ✅ DELETE task

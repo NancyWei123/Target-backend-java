@@ -112,4 +112,30 @@ public class TaskService {
                 .map(TaskMapper::toDTO)
                 .collect(Collectors.toList());
     }
+
+    public TaskDTO finishTask(Long taskId, Long userId) {
+        Task existingTask = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (existingTask.getUser() == null || !existingTask.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You are not allowed to update this task");
+        }
+        existingTask.setCompleted(true);
+        existingTask.setCompletedTime(LocalDateTime.now());
+        Task saved = taskRepository.save(existingTask);
+        return TaskMapper.toDTO(saved);
+    }
+
+    public TaskDTO undoTask(Long taskId, Long userId) {
+        Task existingTask = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (existingTask.getUser() == null || !existingTask.getUser().getId().equals(userId)) {
+            throw new RuntimeException("You are not allowed to update this task");
+        }
+        existingTask.setCompleted(false);
+        existingTask.setCompletedTime(null);
+        Task saved = taskRepository.save(existingTask);
+        return TaskMapper.toDTO(saved);
+    }
 }

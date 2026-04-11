@@ -21,6 +21,7 @@ public class Task {
     private String description;
     private String priority; // LOW, MEDIUM, HIGH
     private LocalDateTime dueTime;
+    private LocalDateTime completedTime;
     private Boolean completed = false;
     @ManyToOne
     @JoinColumn(name = "user_id")

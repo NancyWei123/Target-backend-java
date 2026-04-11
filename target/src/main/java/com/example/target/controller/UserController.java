@@ -1,6 +1,8 @@
 package com.example.target.controller;
 
+import com.example.target.dto.ChangePassword;
 import com.example.target.dto.LoginRequest;
+import com.example.target.dto.UserSettingsDTO;
 import com.example.target.entity.User;
 import com.example.target.repository.UserRepository;
 import com.example.target.tools.JwtUtil;
@@ -68,18 +70,36 @@ public class UserController {
 
     // ✅ CHANGE PASSWORD
     @PutMapping("/password")
-    public String changePassword(@RequestHeader("Authorization") String authHeader, @RequestBody LoginRequest request) {
+    public String changePassword(@RequestHeader("Authorization") String authHeader, @RequestBody ChangePassword changePassword) {
         String token = authHeader.substring(7);
         Long userId = JwtUtil.extractUserId(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String encodedPassword = encoder.encode(user.getPassword());
+        // ✅ Compare raw password with encrypted password
+        if (!encoder.matches(changePassword.getOldPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+        String encodedPassword = encoder.encode(changePassword.getNewPassword());
         user.setPassword(encodedPassword);
         userRepository.save(user);
         return "Password updated";
     }
-
+    @PutMapping("/settings")
+    public String updateSettings(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody UserSettingsDTO dto
+    ) {
+        String token = authHeader.substring(7);
+        Long userId = JwtUtil.extractUserId(token);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setDark_mode(dto.getDarkMode());
+        user.setEmail_notifications(dto.getEmailNotifications());
+        user.setTask_reminders(dto.getTaskReminders());
+        userRepository.save(user);
+        return "Success";
+    }
     // ✅ DELETE USER
     @DeleteMapping("/{id}")
     public String deleteUser(@RequestHeader("Authorization") String authHeader) {
