@@ -1,15 +1,19 @@
 package com.example.target.controller;
 
-import com.example.target.dto.ChangePassword;
-import com.example.target.dto.LoginRequest;
-import com.example.target.dto.UserSettingsDTO;
+import com.example.target.dto.*;
 import com.example.target.entity.User;
 import com.example.target.repository.UserRepository;
+import com.example.target.service.EmailService;
+import com.example.target.service.VerificationCodeService;
+import com.example.target.service.VerifyRequest;
 import com.example.target.tools.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -18,25 +22,74 @@ import java.util.Optional;
 public class UserController {
 
     private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final VerificationCodeService verificationCodeService;
 
-    // ✅ REGISTER
-    @PostMapping("/register")
-    public User register(@RequestBody User user) {
-
-        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already exists");
+    @PostMapping("/send-code")
+    public ResponseEntity<String> sendCode(@RequestBody String email) {
+        email = email == null ? null : email.replace("\"", "").trim();
+        System.out.println("Received email = [" + email + "]");
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body("Email is required");
         }
-        // ✅ Encrypt password
+        String code = String.valueOf((int) ((Math.random() * 900000) + 100000));
+        verificationCodeService.saveCode(email, code);
+        emailService.sendVerificationEmail(email, code);
+
+        return ResponseEntity.ok("Verification code sent successfully");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody ResetPasswordRequest request) {
+        if (request.getEmail() == null || request.getEmail().isBlank()) {
+            return ResponseEntity.badRequest().body("Email is required");
+        }
+        if (request.getCode() == null || request.getCode().isBlank()) {
+            return ResponseEntity.badRequest().body("Verification code is required");
+        }
+        if (request.getNewPassword() == null || request.getNewPassword().isBlank()) {
+            return ResponseEntity.badRequest().body("New password is required");
+        }
+        boolean valid = verificationCodeService.verifyCode(request.getEmail(), request.getCode());
+        if (!valid) {
+            return ResponseEntity.badRequest().body("Invalid or expired verification code");
+        }
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
-        String encodedPassword = encoder.encode(user.getPassword());
-        user.setPassword(encodedPassword);
-        return userRepository.save(user);
+        user.setPassword(encoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        verificationCodeService.deleteCode(request.getEmail());
+        return ResponseEntity.ok("Password reset successfully");
+    }
+
+
+
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@RequestBody RegisterRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            return ResponseEntity.badRequest().body("Email already exists");
+        }
+        System.out.println("Registering user: " + request.getEmail());
+        System.out.println("Registering user: " + request.getCode());
+        boolean valid = verificationCodeService.verifyCode(request.getEmail(), request.getCode());
+        if (!valid) {
+            return ResponseEntity.badRequest().body("Invalid or expired verification code");
+        }
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        User user = new User();
+        user.setUsername(request.getUsername());
+        user.setEmail(request.getEmail());
+        user.setPassword(encoder.encode(request.getPassword()));
+        user.setIsActive(true);
+        userRepository.save(user);
+        verificationCodeService.deleteCode(request.getEmail());
+        return ResponseEntity.ok("Registration successful");
     }
 
     // ✅ LOGIN
     @PostMapping("/login")
     public String login(@RequestBody LoginRequest request) {
-
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();

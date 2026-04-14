@@ -91,26 +91,22 @@ public class TaskService {
         taskRepository.delete(existingTask);
     }
 
-    public List<TaskDTO> searchTasksByKeyword(Long userId, String keyword) {
-        List<Task> tasks = taskRepository.searchTasksByKeywords(userId, keyword);
+    public List<TaskDTO> searchTasks(Long userId, String keyword, LocalDate startDate, LocalDate endDate) {
+        LocalDateTime startTime = null;
+        LocalDateTime endTime = null;
 
-        return tasks.stream()
-                .map(TaskMapper::toDTO)
-                .collect(Collectors.toList());
-    }
-    public List<TaskDTO> searchTasksByDDL(Long userId, LocalDate startDate, LocalDate endDate) {
-        if (startDate.isAfter(endDate)) {
-            throw new IllegalArgumentException("startDate cannot be after endDate");
+        if (startDate != null) {
+            startTime = startDate.atStartOfDay();
         }
 
-        LocalDateTime startDateTime = startDate.atStartOfDay();
-        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+        if (endDate != null) {
+            endTime = endDate.plusDays(1).atStartOfDay();
+        }
 
-        List<Task> tasks = taskRepository.findByUserIdAndDueTimeBetween(userId, startDateTime, endDateTime);
-
-        return tasks.stream()
+        return taskRepository.searchTasks(userId, keyword, startTime, endTime)
+                .stream()
                 .map(TaskMapper::toDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     public TaskDTO finishTask(Long taskId, Long userId) {

@@ -6,6 +6,7 @@ import com.example.target.entity.User;
 import com.example.target.service.TaskService;
 import com.example.target.tools.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.validation.Errors;
 import org.springframework.web.bind.annotation.*;
 
@@ -92,16 +93,15 @@ public class TaskController {
 
         taskService.deleteTask(id, userId);
     }
-    @GetMapping("/search/keyword")
-    public List<TaskDTO> searchTasksByKeyword(@RequestHeader("Authorization") String authHeader,@RequestParam String keyword) {
+    @GetMapping("/search")
+    public List<TaskDTO> searchTasks(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
         String token = authHeader.substring(7);
         Long userId = JwtUtil.extractUserId(token);
-        return taskService.searchTasksByKeyword(userId,keyword);
-    }
-    @GetMapping("/search/deadline")
-    public List<TaskDTO> searchTasksByDDL(@RequestHeader("Authorization") String authHeader,@RequestParam LocalDate startDate,@RequestParam LocalDate endDate) {
-        String token = authHeader.substring(7);
-        Long userId = JwtUtil.extractUserId(token);
-        return taskService.searchTasksByDDL(userId,startDate,endDate);
+        return taskService.searchTasks(userId, keyword, startDate, endDate);
     }
 }

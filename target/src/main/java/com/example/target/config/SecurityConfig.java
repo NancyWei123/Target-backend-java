@@ -26,7 +26,7 @@ public class SecurityConfig {
                 .cors(cors -> {})   // ✅ enable CORS
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+                        .requestMatchers("/api/users/login", "/api/users/register", "/api/users/send-code", "/api/users/reset-password").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // ✅ allow preflight
                         .anyRequest().authenticated()
                 )
