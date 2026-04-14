@@ -18,26 +18,80 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             "OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<Task> searchTasksByKeywords(Long userId, String keyword);
 
-    List<Task> findByUserIdAndDueTimeBetween(Long userId, LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+
     @Query("""
     SELECT t FROM Task t
     WHERE t.user.id = :userId
-      AND (
-            :keyword IS NULL OR :keyword = '' OR
-            LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
-            LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
-          )
-      AND (
-            :startTime IS NULL OR t.dueTime >= :startTime
-          )
-      AND (
-            :endTime IS NULL OR t.dueTime < :endTime
-          )
-""")
-    List<Task> searchTasks(
-            @Param("userId") Long userId,
-            @Param("keyword") String keyword,
-            @Param("startTime") LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime
-    );
+    AND (
+        LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    """)
+        List<Task> searchByKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND t.dueTime >= :startDateTime
+    """)
+        List<Task> searchByStartDate(@Param("userId") Long userId, @Param("startDateTime") LocalDateTime startDateTime);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND t.dueTime < :endDateTime
+    """)
+        List<Task> searchByEndDate(@Param("userId") Long userId, @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND t.dueTime >= :startDateTime
+    AND t.dueTime < :endDateTime
+    """)
+        List<Task> searchByDateRange(@Param("userId") Long userId,
+                                     @Param("startDateTime") LocalDateTime startDateTime,
+                                     @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND (
+        LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    AND t.dueTime >= :startDateTime
+    """)
+        List<Task> searchByKeywordAndStartDate(@Param("userId") Long userId,
+                                               @Param("keyword") String keyword,
+                                               @Param("startDateTime") LocalDateTime startDateTime);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND (
+        LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    AND t.dueTime < :endDateTime
+    """)
+        List<Task> searchByKeywordAndEndDate(@Param("userId") Long userId,
+                                             @Param("keyword") String keyword,
+                                             @Param("endDateTime") LocalDateTime endDateTime);
+
+    @Query("""
+    SELECT t FROM Task t
+    WHERE t.user.id = :userId
+    AND (
+        LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(t.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    AND t.dueTime >= :startDateTime
+    AND t.dueTime < :endDateTime
+    """)
+        List<Task> searchByKeywordAndDateRange(@Param("userId") Long userId,
+                                               @Param("keyword") String keyword,
+                                               @Param("startDateTime") LocalDateTime startDateTime,
+                                               @Param("endDateTime") LocalDateTime endDateTime);
 }

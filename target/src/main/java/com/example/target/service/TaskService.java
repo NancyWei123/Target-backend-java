@@ -92,21 +92,34 @@ public class TaskService {
     }
 
     public List<TaskDTO> searchTasks(Long userId, String keyword, LocalDate startDate, LocalDate endDate) {
-        LocalDateTime startTime = null;
-        LocalDateTime endTime = null;
+        String safeKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
 
-        if (startDate != null) {
-            startTime = startDate.atStartOfDay();
+        LocalDateTime startDateTime = startDate == null ? null : startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate == null ? null : endDate.plusDays(1).atStartOfDay();
+
+        List<Task> tasks;
+
+        if (safeKeyword == null && startDateTime == null && endDateTime == null) {
+            tasks = taskRepository.findByUserId(userId);
+        } else if (safeKeyword != null && startDateTime == null && endDateTime == null) {
+            tasks = taskRepository.searchByKeyword(userId, safeKeyword);
+        } else if (safeKeyword == null && startDateTime != null && endDateTime == null) {
+            tasks = taskRepository.searchByStartDate(userId, startDateTime);
+        } else if (safeKeyword == null && startDateTime == null && endDateTime != null) {
+            tasks = taskRepository.searchByEndDate(userId, endDateTime);
+        } else if (safeKeyword == null) {
+            tasks = taskRepository.searchByDateRange(userId, startDateTime, endDateTime);
+        } else if (startDateTime == null && endDateTime == null) {
+            tasks = taskRepository.searchByKeyword(userId, safeKeyword);
+        } else if (endDateTime == null) {
+            tasks = taskRepository.searchByKeywordAndStartDate(userId, safeKeyword, startDateTime);
+        } else if (startDateTime == null) {
+            tasks = taskRepository.searchByKeywordAndEndDate(userId, safeKeyword, endDateTime);
+        } else {
+            tasks = taskRepository.searchByKeywordAndDateRange(userId, safeKeyword, startDateTime, endDateTime);
         }
 
-        if (endDate != null) {
-            endTime = endDate.plusDays(1).atStartOfDay();
-        }
-
-        return taskRepository.searchTasks(userId, keyword, startTime, endTime)
-                .stream()
-                .map(TaskMapper::toDTO)
-                .toList();
+        return tasks.stream().map(TaskMapper::toDTO).toList();
     }
 
     public TaskDTO finishTask(Long taskId, Long userId) {
